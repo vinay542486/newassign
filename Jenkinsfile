@@ -1,39 +1,30 @@
-node {
-   def mvnHome = tool 'M3'
-
-   stage('Checkout Code') { 
-      git 'https://github.com/maping/java-maven-calculator-web-app.git'
-   }
-   stage('Test Server') {
-      sh '''
-         docker run -it -d --rm -v maven_repo:/root/.m2 \
-            -v "$(pwd)":/app -w /app \
-            -p 9999:9999 \
-            --network maven \
-            --name jetty_container maven:3.8.6-openjdk-18-slim mvn jetty:run
-      '''
-   }
-   stage('Junit Test') {
-      sh '''
-         docker run -it --rm -v maven_repo:/root/.m2 \
-            -v "$(pwd)":/app -w /app \
-            --network maven maven:3.8.6-openjdk-18-slim mvn clean test 
-      '''
-   }
-
-   stage('Integration Test') {
-      sh '''
-         docker run -it --rm -v maven_repo:/root/.m2 \
-            -v "$(pwd)":/app -w /app \
-            --network maven maven:3.8.6-openjdk-18-slim mvn clean integration-test 
-      '''
-   }
-
-   stage('Build and Deploy') {
-      timeout(time: 10, unit: 'MINUTES') {
-           input message: 'Deploy this web app to production ?'
-      }
-      echo 'Deploy...'
-   }
+pipeline{
+	agent any
+	
+	stages{
+		stage("DOCKER BUILD"){
+			steps{
+				echo "BUILD stage"
+				sh ''' 
+					cd /var/lib/jenkins/workspace/newassign
+					docker build -t vinay542486/my_docrepo:1.0 .
+				'''
+			}
+		}
+		stage("DOCKER PUSH"){
+	                 steps{
+				sh 'docker image ls'
+				sh 'docker push vinay542486/my_docrepo:1.0'
+				echo "Docker image pushed to docker hub successfuly"
+			}
+		}
+		
+		stage("Docker-run"){
+			steps{
+				echo "Running container"
+				sh 'docker run -it -d -p 8060:8080 --name vinay-tomcat vinay542486/my_docrepo:1.0'
+				
+			}
+		}
+	}
 }
-   
